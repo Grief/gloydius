@@ -50,5 +50,8 @@ def ini_config(name, changes, backup):
                 ini.write(''.join((param, '=', value, '\n')))
 
 
+def ask():
+    return True
+
     # if not found:
     #     log('warn', 'section {} not found in {}', section, ini)
