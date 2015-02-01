@@ -1,13 +1,55 @@
 #!/usr/bin/python
-import os, shutil
-from color import log
+import os, shutil, stat, zipfile
+import tarfile
+from gloydius import path
+
+from gloydius.color import log
+from gloydius.pytools import make_dirs
+
+from gloydius.terminal import cursor_back
+
+def find_in(directory, filters):
+    include, exclude, result = set(), set(), set()
+
+    def get_inclusion(variants):
+        count = len(variants)
+        inclusion = [-1] * count
+        for i in range(count):
+            v = variants[i]
+            if   v in exclude: inclusion[i] = 0
+            elif v in include: inclusion[i] = 1
+        return inclusion
+
+    negation = False
+    for word in filters.lower().split(' '):
+        if len(word) == 0: continue
+        if word == 'not':
+            negation = True
+            continue
+        if negation:
+            exclude.add(word)
+            negation = False
+        else: include.add(word)
+
+    type_inclusion = get_inclusion(['file', 'dir', 'link'])
+
+    # print include, exclude
+    for name in os.listdir(directory):
+        full = path(directory, name)
+        mode = os.stat(full).st_mode
+        if any([inc != -1 and inc != getattr(stat, func)(mode) for inc, func in zip(type_inclusion, ['S_ISREG', 'S_ISDIR', 'S_ISLNK'])]): continue
+
+        if 'hidden' in exclude and name.startswith('.'): continue
+
+        result.add(name)
+    return result
 
 def symlink(link, target, backup=None):
     if os.path.islink(link) and os.readlink(link) == target:
         log('pass', '{} is already installed', link)
         return
     if os.path.exists(link):
-        if backup is not None: shutil.copy(link, backup)
+        if backup is not None: shutil.move(link, backup)
         os.remove(link)
     os.symlink(target, link)
     log('info', '{} has been installed', link)
@@ -49,6 +91,20 @@ def ini_config(name, changes, backup):
             for param, value in params.iteritems():
                 ini.write(''.join((param, '=', value, '\n')))
 
+def extract_from_zip(archive, mask, target):
+    with zipfile.ZipFile(archive) as zip:
+        for name in zip.namelist():
+            if mask.match(name) is None: continue
+            with zip.open(name) as f, open(target, 'wb') as t:
+                shutil.copyfileobj(f, t)
+            return True
+    return False
+
+# TODO: Warning: Never extract archives from untrusted sources without prior inspection. It is possible that files are created outside of path, e.g. members that have absolute filenames starting with "/" or filenames with two dots "..".
+def extract_tar_archive(archive, directory):
+    make_dirs(directory)
+    with tarfile.open(archive) as tar: tar.extractall(path=directory)
+    return True
 
 def ask():
     return True
