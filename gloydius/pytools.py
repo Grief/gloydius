@@ -4,6 +4,8 @@ import functools, os, errno, itertools, datetime, psutil, pygments, pygments.lex
 from PIL import Image
 from termcolor import colored
 
+from gloydius.color import esc
+
 XML_LEXER         = pygments.lexers.get_lexer_by_name('xml')
 CONSOLE_FORMATTER = pygments.formatters.get_formatter_by_name('console')
 
@@ -95,7 +97,7 @@ def print_image(file_name, columns=0, aspect=2):
     width, height = img.size
     width, height = (columns, int(height * columns / width / aspect)) if width > columns else (width, int(height / aspect))
     pix = img.resize((width, height), Image.ANTIALIAS).load()
-    for y in range(0, height): print(' '.join([esc(bg=pix[x, y]) for x in range(0, width)]) + ' ' + esc())
+    for y in range(0, height): print(' '.join([esc(bg=pix[x, y][0:3]) for x in range(0, width)]) + ' ' + esc())
 
 
 def enum(**values):

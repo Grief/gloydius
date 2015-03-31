@@ -13,6 +13,9 @@ def read_file(name):
 def read_file_lines(name):
     return [line.rstrip('\n') for line in open(name).readlines()]
 
+def for_line(name, action, *state):
+    for line in open(name, 'r'): state = action(line.rstrip('\n'), *state)
+
 def write_file(name, content):
     parent = parent_dir(name, 1)
     if not os.path.exists(parent): os.makedirs(parent)
