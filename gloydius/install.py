@@ -48,11 +48,16 @@ def symlink(link, target, backup=None):
     if os.path.islink(link) and os.readlink(link) == target:
         log('pass', '{} is already installed', link)
         return
-    if os.path.exists(link):
+    if os.path.isdir(link): shutil.rmtree(link)
+    if os.path.exists(link) or os.path.islink(link):
         if backup is not None: shutil.move(link, backup)
         os.remove(link)
-    os.symlink(target, link)
-    log('info', '{} has been installed', link)
+    try:
+        os.symlink(target, link)
+        log('info', '{} has been installed', link)
+    except OSError as e:
+        if e.errno == 13: log('err', '{}: not enough permissions', link)
+        else: log('err', '{}: unknown error {}', link, e.errno)
 
 def ini_config(name, changes, backup):
     log('info', '\nChanging ini configuration in {}', name)

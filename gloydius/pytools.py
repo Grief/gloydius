@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import functools, os, errno, itertools, datetime, psutil, pygments, pygments.lexers, pygments.formatters, subprocess, struct, xml.dom.minidom
+import functools, os, errno, itertools, datetime, psutil, pygments, pygments.lexers, pygments.formatters, subprocess, struct, time, xml.dom.minidom
 
 from PIL import Image
 from termcolor import colored
@@ -90,15 +90,32 @@ def print_xml(text): print(pygments.highlight(xml.dom.minidom.parseString(text).
 def gradient(color1, color2, length=4, escape=None):
     return ' '.join([esc(bg=tuple([int((c2 - c1) * i / (length - 1) + c1) for c1, c2 in zip(color1, color2)]), escape=escape) for i in range(length)]) + ' '
 
+from gloydius.terminal import cursor_up
 
-def print_image(file_name, columns=0, aspect=2):
+def print_images(names, columns=0, aspect=2):
     if columns < 1: columns = terminal_size()[1]
-    img = Image.open(file_name)
-    width, height = img.size
-    width, height = (columns, int(height * columns / width / aspect)) if width > columns else (width, int(height / aspect))
-    pix = img.resize((width, height), Image.ANTIALIAS).load()
-    for y in range(0, height): print(' '.join([esc(bg=pix[x, y][0:3]) for x in range(0, width)]) + ' ' + esc())
-
+    data = {}
+    lines = 0
+    for name in names:
+        img = Image.open(name)
+        # print img.info['duration']
+        data[name] = {
+            'img': img,
+            'size': img.size
+        }
+        lines += img.size[1]
+    while True:
+        for name in names:
+            img = data[name]['img']
+            try: img.seek(img.tell() + 1)
+            except EOFError: img.seek(0)
+            img = img.convert('RGBA')
+            width, height = data[name]['size']
+            width, height = (columns, int(height * columns / width / aspect)) if width > columns else (width, int(height / aspect))
+            pix = img.resize((width, height), Image.ANTIALIAS).load()
+            for y in range(0, height): print(' '.join([esc(bg=pix[x, y]) for x in range(0, width)]) + ' ' + esc())
+            cursor_up(height + 1)
+        time.sleep(0.1)
 
 def enum(**values):
     e = values.copy()
