@@ -108,7 +108,26 @@ def extract_from_zip(archive, mask, target):
 # TODO: Warning: Never extract archives from untrusted sources without prior inspection. It is possible that files are created outside of path, e.g. members that have absolute filenames starting with "/" or filenames with two dots "..".
 def extract_tar_archive(archive, directory):
     make_dirs(directory)
-    with tarfile.open(archive) as tar: tar.extractall(path=directory)
+                                       def is_within_directory(directory, target):
+                                           
+                                           abs_directory = os.path.abspath(directory)
+                                           abs_target = os.path.abspath(target)
+                                       
+                                           prefix = os.path.commonprefix([abs_directory, abs_target])
+                                           
+                                           return prefix == abs_directory
+                                       
+                                       def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+                                       
+                                           for member in tar.getmembers():
+                                               member_path = os.path.join(path, member.name)
+                                               if not is_within_directory(path, member_path):
+                                                   raise Exception("Attempted Path Traversal in Tar File")
+                                       
+                                           tar.extractall(path, members, numeric_owner=numeric_owner) 
+                                           
+                                       
+                                       safe_extract(tar, path=directory)
     return True
 
 def ask():
